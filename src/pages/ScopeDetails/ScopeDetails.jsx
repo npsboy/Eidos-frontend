@@ -41,6 +41,12 @@ const ScopeDetails = () => {
   const [intentEditing, setIntentEditing] = useState(false);
   const [formatEditing, setFormatEditing] = useState(false);
 
+  const [additionalSettings, setAdditionalSettings] = useState({
+    aiOverview: true,
+    postingTimes: true,
+    topPerformerInsights: true
+  });
+
   useEffect(() => {
     const savedScopes = localStorage.getItem('eidos_scopes');
     if (savedScopes) {
@@ -51,6 +57,7 @@ const ScopeDetails = () => {
         setAccounts(foundScope.accountList || []);
         if (foundScope.intents) setIntents(foundScope.intents);
         if (foundScope.formats) setFormats(foundScope.formats);
+        if (foundScope.additionalSettings) setAdditionalSettings(foundScope.additionalSettings);
       } else {
         navigate('/dashboard');
       }
@@ -59,23 +66,30 @@ const ScopeDetails = () => {
     }
   }, [id, navigate]);
 
-  const updateLocalStorage = (newAccounts, newIntents, newFormats) => {
+const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSettings) => {
     const savedScopes = localStorage.getItem('eidos_scopes');
     if (savedScopes) {
       const parsedScopes = JSON.parse(savedScopes);
-      const updatedScopes = parsedScopes.map(s => 
-        s.id === id 
-          ? { 
-              ...s, 
-              accountList: newAccounts || accounts, 
+      const updatedScopes = parsedScopes.map(s =>
+        s.id === id
+          ? {
+              ...s,
+              accountList: newAccounts || accounts,
               accounts: (newAccounts || accounts).length > 0 ? (newAccounts || accounts).map(a => a.name).join(', ') : 'No accounts added',
               intents: newIntents || intents,
-              formats: newFormats || formats
-            } 
+              formats: newFormats || formats,
+              additionalSettings: newAdditionalSettings || additionalSettings
+            }
           : s
       );
       localStorage.setItem('eidos_scopes', JSON.stringify(updatedScopes));
     }
+  };
+
+  const toggleSetting = (settingKey) => {
+    const newSettings = { ...additionalSettings, [settingKey]: !additionalSettings[settingKey] };
+    setAdditionalSettings(newSettings);
+    updateLocalStorage(null, null, null, newSettings);
   };
 
   // Account Handlers
@@ -312,6 +326,34 @@ const ScopeDetails = () => {
                   </div>
                   {renderCategoryList('format', formats, formatExpanded, formatEditing)}
                 </div>
+              </div>
+
+              <div className="additional-settings-section">
+                <div className="settings-header">Additional Settings</div>
+                <div className="settings-content">
+                  <div className="setting-item">
+                    <span style={{ width: '180px' }}>AI Overview</span>
+                    <button className={`toggle-switch ${additionalSettings.aiOverview ? 'on' : 'off'}`} onClick={() => toggleSetting('aiOverview')}>
+                      <div className="toggle-handle"></div>
+                    </button>
+                  </div>
+                  <div className="setting-item">
+                    <span style={{ width: '180px' }}>Posting times</span>
+                    <button className={`toggle-switch ${additionalSettings.postingTimes ? 'on' : 'off'}`} onClick={() => toggleSetting('postingTimes')}>
+                      <div className="toggle-handle"></div>
+                    </button>
+                  </div>
+                  <div className="setting-item">
+                    <span style={{ width: '180px' }}>Top performer insights</span>
+                    <button className={`toggle-switch ${additionalSettings.topPerformerInsights ? 'on' : 'off'}`} onClick={() => toggleSetting('topPerformerInsights')}>
+                      <div className="toggle-handle"></div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="run-btn-container">
+                <button className="run-btn">Run</button>
               </div>
             </>
           ) : (
