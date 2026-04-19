@@ -2,6 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Settings, BarChart2, Link as LinkIcon, Trash2, ChevronDown, ChevronUp, Edit2, Plus } from 'lucide-react';
 import Sidebar from '../../components/Sidebar/Sidebar';
+import ClassificationPerformanceChart from '../../components/ClassificationPerformanceChart/ClassificationPerformanceChart';
 import './ScopeDetails.css';
 
 const defaultIntents = [
@@ -357,7 +358,9 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
               </div>
             </>
           ) : (
-            <div className="blank-page"></div>
+            <div className="extracted-data-page" style={{ paddingTop: '20px' }}>
+              <ClassificationPerformanceChart />
+            </div>
           )}
         </div>
       </div>
