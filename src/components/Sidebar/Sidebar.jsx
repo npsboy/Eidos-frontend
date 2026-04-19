@@ -7,6 +7,7 @@ const Sidebar = () => {
     <div className="sidebar">
       <div className="sidebar-logo">
         <img src="/images/Eidos_Logo.png" alt="Eidos Logo" />
+        <span className="sidebar-brand-name">Eidos</span>
       </div>
       <nav className="sidebar-nav">
         <NavLink to="/account" className={({isActive}) => isActive ? "sidebar-link active" : "sidebar-link"}>Account</NavLink>

@@ -8,12 +8,24 @@
   padding: 40px;
   box-sizing: border-box;
   border-right: 1px solid #2a2a2a;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 10;
 }
 
 .sidebar-logo {
   display: flex;
   align-items: center;
+  gap: 12px;
   margin-bottom: 60px;
+}
+
+.sidebar-brand-name {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.5px;
 }
 
 .sidebar-logo img {
