@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Settings, BarChart2, Link as LinkIcon, Trash2, ChevronDown, ChevronUp, Edit2, Plus } from 'lucide-react';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import ClassificationPerformanceChart from '../../components/ClassificationPerformanceChart/ClassificationPerformanceChart';
+import ClassificationPerformanceChart, { intentDummyData, formatDummyData } from '../../components/ClassificationPerformanceChart/ClassificationPerformanceChart';
 import './ScopeDetails.css';
 
 const defaultIntents = [
@@ -358,8 +358,9 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
               </div>
             </>
           ) : (
-            <div className="extracted-data-page" style={{ paddingTop: '20px' }}>
-              <ClassificationPerformanceChart />
+            <div className="extracted-data-page" style={{ paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '30px' }}>
+              <ClassificationPerformanceChart title="Intent Performance" data={intentDummyData} />
+              <ClassificationPerformanceChart title="Format Performance" data={formatDummyData} />
             </div>
           )}
         </div>
