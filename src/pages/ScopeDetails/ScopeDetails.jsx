@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Settings, BarChart2, Link as LinkIcon, Trash2, ChevronDown, ChevronUp, Edit2, Plus } from 'lucide-react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import ClassificationPerformanceChart, { intentDummyData, formatDummyData } from '../../components/ClassificationPerformanceChart/ClassificationPerformanceChart';
+import TopPerformer from '../../components/TopPerformer/TopPerformer';
+import ContentTypePerformance from '../../components/ContentTypePerformance/ContentTypePerformance';
+import AiOverview from '../../components/AiOverview/AiOverview';
 import './ScopeDetails.css';
 
 const defaultIntents = [
@@ -361,6 +364,9 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
             <div className="extracted-data-page" style={{ paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '30px' }}>
               <ClassificationPerformanceChart title="Intent Performance" data={intentDummyData} />
               <ClassificationPerformanceChart title="Format Performance" data={formatDummyData} />
+              <TopPerformer />
+              <ContentTypePerformance />
+              <AiOverview />
             </div>
           )}
         </div>

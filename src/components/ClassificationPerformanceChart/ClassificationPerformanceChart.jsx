@@ -120,7 +120,7 @@ const colors = {
   avgRelativeLikes: '#5c8a3f', // dark green
   medianRelativeLikes: '#7ab148', // medium green
   avgRelativeComments: '#b4cfa1', // light green
-  background: '#1a1a1a',
+  background: '#212121', // updated to be lighter than the main background
   text: '#8c8c8c',
   grid: '#404040',
   pieBg: '#8c8c8c',
@@ -173,7 +173,7 @@ const CustomTick = (props) => {
   return (
     <g transform={`translate(${x},${y})`}>
       {/* Container for Pie Chart */}
-      <g transform={`translate(0, -35)`}>
+      <g transform={`translate(0, -65)`}>
         {/* Background circle */}
         <circle 
           cx="0" 
@@ -211,21 +211,21 @@ const CustomTick = (props) => {
       {/* X-Axis Text Label */}
       {line2 ? (
         <>
-          <text x={0} y={0} dy={14} textAnchor="middle" fill={colors.text} fontSize="12">
+          <text x={0} y={-24} textAnchor="middle" fill={colors.text} fontSize="12">
             {line1}
           </text>
-          <text x={0} y={0} dy={28} textAnchor="middle" fill={colors.text} fontSize="12">
+          <text x={0} y={-10} textAnchor="middle" fill={colors.text} fontSize="12">
             {line2}
           </text>
         </>
       ) : (
-        <text x={0} y={0} dy={16} textAnchor="middle" fill={colors.text} fontSize="12">
+        <text x={0} y={-18} textAnchor="middle" fill={colors.text} fontSize="12">
           {payload.value}
         </text>
       )}
       
       {/* Target line indicating the baseline for the top labels */}
-      <line x1="-50" y1="38" x2="50" y2="38" stroke={colors.grid} strokeWidth="1" />
+      <line x1="-50" y1="-2" x2="50" y2="-2" stroke={colors.grid} strokeWidth="1" />
     </g>
   );
 };
@@ -238,7 +238,7 @@ export const ClassificationPerformanceChart = ({ title = "Intent Performance", d
         <BarChart
           data={data}
           margin={{
-            top: 70, // Space for the pie charts
+            top: 100, // Increased space to stop overlapping labels/pie charts
             right: 30,
             left: 20,
             bottom: 30,
