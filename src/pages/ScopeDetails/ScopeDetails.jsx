@@ -223,6 +223,8 @@ const ScopeDetails = () => {
           </button>
           <button
             className={`tab ${activeTab === 'data' ? 'active' : ''}`}
+            onClick={() => setActiveTab('data')}
+          >
             Extracted Data
           </button>
         </div>
