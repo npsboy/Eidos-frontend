@@ -48,7 +48,8 @@ const ScopeDetails = () => {
   const [additionalSettings, setAdditionalSettings] = useState({
     aiOverview: true,
     postingTimes: true,
-    topPerformerInsights: true
+    topPerformerInsights: true,
+    maxPostsPerAccount: 50
   });
 
   useEffect(() => {
@@ -92,6 +93,12 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
 
   const toggleSetting = (settingKey) => {
     const newSettings = { ...additionalSettings, [settingKey]: !additionalSettings[settingKey] };
+    setAdditionalSettings(newSettings);
+    updateLocalStorage(null, null, null, newSettings);
+  };
+
+  const updateSettingValue = (settingKey, value) => {
+    const newSettings = { ...additionalSettings, [settingKey]: value };
     setAdditionalSettings(newSettings);
     updateLocalStorage(null, null, null, newSettings);
   };
@@ -352,6 +359,26 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
                     <button className={`toggle-switch ${additionalSettings.topPerformerInsights ? 'on' : 'off'}`} onClick={() => toggleSetting('topPerformerInsights')}>
                       <div className="toggle-handle"></div>
                     </button>
+                  </div>
+                  <div className="setting-item">
+                    <span style={{ width: '180px' }}>Max posts per account</span>
+                    <input 
+                      type="number"
+                      value={additionalSettings.maxPostsPerAccount !== undefined ? additionalSettings.maxPostsPerAccount : 50}
+                      onChange={(e) => updateSettingValue('maxPostsPerAccount', Number(e.target.value))}
+                      style={{ 
+                        width: '50px', 
+                        height: '28px',
+                        backgroundColor: '#333333', 
+                        border: 'none', 
+                        borderRadius: '4px',
+                        color: 'white',
+                        textAlign: 'center',
+                        fontSize: '14px',
+                        padding: '0 4px',
+                        outline: 'none'
+                      }}
+                    />
                   </div>
                 </div>
               </div>
