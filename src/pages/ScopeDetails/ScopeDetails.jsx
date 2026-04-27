@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Settings, Link as LinkIcon, Trash2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar/Sidebar';
-import ClassificationPerformanceChart, { intentDummyData, formatDummyData } from '../../components/ClassificationPerformanceChart/ClassificationPerformanceChart';
+import ClassificationPerformanceChart from '../../components/ClassificationPerformanceChart/ClassificationPerformanceChart';
 import TopPerformer from '../../components/TopPerformer/TopPerformer';
 import ContentTypePerformance from '../../components/ContentTypePerformance/ContentTypePerformance';
 import AiOverview from '../../components/AiOverview/AiOverview';
@@ -71,6 +71,31 @@ const parseSseChunk = (chunk, onEvent) => {
   return chunk.slice(cursor);
 };
 
+const linkPattern = /(https?:\/\/[^\s]+)/g;
+
+const renderMessageWithLinks = (message) => {
+  if (!message) return null;
+
+  const chunks = message.split(linkPattern);
+  return chunks.map((chunk, index) => {
+    if (chunk.match(linkPattern)) {
+      return (
+        <a
+          key={`${chunk}-${index}`}
+          href={chunk}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="stream-link"
+        >
+          {chunk}
+        </a>
+      );
+    }
+
+    return <React.Fragment key={`${chunk}-${index}`}>{chunk}</React.Fragment>;
+  });
+};
+
 const ScopeDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -91,7 +116,7 @@ const ScopeDetails = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
-  const [streamEvents, setStreamEvents] = useState([]);
+  const [streamEvent, setStreamEvent] = useState(null);
 
   const [additionalSettings, setAdditionalSettings] = useState({
     aiOverview: true,
@@ -244,7 +269,7 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
     setActiveTab('data');
     setAnalysisData(null); // Clear previous data
     setError(null);
-    setStreamEvents([]);
+    setStreamEvent(null);
 
     const payload = {
       accounts: accounts.map(a => a.name).filter(Boolean),
@@ -289,45 +314,33 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
           }
 
           if (eventName === 'progress') {
-            setStreamEvents((currentEvents) => [
-              ...currentEvents,
-              {
-                id: `${Date.now()}-${currentEvents.length}`,
-                type: 'progress',
-                stage: parsedData.stage,
-                title: streamStageLabels[parsedData.stage] || parsedData.stage || 'Progress update',
-                message: parsedData.message || 'Working...',
-                account: parsedData.account,
-                postNumber: parsedData.postNumber,
-                link: parsedData.link
-              }
-            ]);
+            setStreamEvent({
+              type: 'progress',
+              stage: parsedData.stage,
+              title: streamStageLabels[parsedData.stage] || parsedData.stage || 'Progress update',
+              message: parsedData.message || 'Working...',
+              account: parsedData.account,
+              postNumber: parsedData.postNumber,
+              link: parsedData.link
+            });
             return;
           }
 
           if (eventName === 'final') {
             setAnalysisData(parsedData);
-            setStreamEvents((currentEvents) => [
-              ...currentEvents,
-              {
-                id: `${Date.now()}-${currentEvents.length}`,
-                type: 'final',
-                title: 'Analysis complete',
-                message: 'Full analysis payload received.'
-              }
-            ]);
+            setStreamEvent({
+              type: 'final',
+              title: 'Analysis complete',
+              message: 'Full analysis payload received.'
+            });
           }
 
           if (eventName === 'done') {
-            setStreamEvents((currentEvents) => [
-              ...currentEvents,
-              {
-                id: `${Date.now()}-${currentEvents.length}`,
-                type: 'done',
-                title: 'Finished',
-                message: parsedData.message || 'analysis complete'
-              }
-            ]);
+            setStreamEvent({
+              type: 'done',
+              title: 'Finished',
+              message: parsedData.message || 'analysis complete'
+            });
           }
         };
 
@@ -562,7 +575,7 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
             </>
           ) : (
             <div className="extracted-data-page" style={{ paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '30px' }}>
-              {streamEvents.length > 0 && (
+              {streamEvent && (
                 <div className="stream-panel">
                   <div className="stream-panel-header">
                     <div>
@@ -572,22 +585,29 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
                     {isLoading && <div className="stream-panel-badge">Streaming</div>}
                   </div>
                   <div className="stream-event-list">
-                    {streamEvents.map((event) => (
-                      <div key={event.id} className={`stream-event stream-event-${event.type}`}>
-                        <div className="stream-event-head">
-                          <span className="stream-event-title">{event.title}</span>
-                          {event.stage && <span className="stream-event-stage">{event.stage}</span>}
-                        </div>
-                        <div className="stream-event-message">{event.message}</div>
-                        {(event.account || event.postNumber || event.link) && (
-                          <div className="stream-event-meta">
-                            {event.account && <span>{event.account}</span>}
-                            {event.postNumber && <span>Post {event.postNumber}</span>}
-                            {event.link && <span>{event.link}</span>}
-                          </div>
-                        )}
+                    <div className={`stream-event stream-event-${streamEvent.type}`}>
+                      <div className="stream-event-head">
+                        <span className="stream-event-title">{streamEvent.title}</span>
+                        {streamEvent.stage && <span className="stream-event-stage">{streamEvent.stage}</span>}
                       </div>
-                    ))}
+                      <div className="stream-event-message">{renderMessageWithLinks(streamEvent.message)}</div>
+                      {(streamEvent.account || streamEvent.postNumber || streamEvent.link) && (
+                        <div className="stream-event-meta">
+                          {streamEvent.account && <span>{streamEvent.account}</span>}
+                          {streamEvent.postNumber && <span>Post {streamEvent.postNumber}</span>}
+                          {streamEvent.link && (
+                            <a
+                              href={streamEvent.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="stream-link stream-meta-link"
+                            >
+                              Open post
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      </div>
                   </div>
                 </div>
               )}
