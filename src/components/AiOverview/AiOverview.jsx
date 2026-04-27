@@ -1,6 +1,40 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
+const markdownComponents = {
+  h1: ({ children }) => <h3 style={{ color: '#ffffff', margin: '0 0 14px 0', fontSize: '1.2rem', fontWeight: 500 }}>{children}</h3>,
+  h2: ({ children }) => <h4 style={{ color: '#ffffff', margin: '0 0 12px 0', fontSize: '1.08rem', fontWeight: 500 }}>{children}</h4>,
+  h3: ({ children }) => <h5 style={{ color: '#ffffff', margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 500 }}>{children}</h5>,
+  p: ({ children }) => <p style={{ margin: '0 0 14px 0' }}>{children}</p>,
+  ul: ({ children }) => <ul style={{ margin: '0 0 16px 0', paddingLeft: '22px' }}>{children}</ul>,
+  ol: ({ children }) => <ol style={{ margin: '0 0 16px 0', paddingLeft: '22px' }}>{children}</ol>,
+  li: ({ children }) => <li style={{ marginBottom: '8px' }}>{children}</li>,
+  strong: ({ children }) => <strong style={{ color: '#e7e7e7' }}>{children}</strong>,
+  em: ({ children }) => <em style={{ color: '#cbcbcb' }}>{children}</em>,
+  a: ({ href, children }) => (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: '#7cc8ff', textDecoration: 'underline' }}>
+      {children}
+    </a>
+  ),
+  code: ({ children }) => (
+    <code
+      style={{
+        backgroundColor: '#2a2a2a',
+        border: '1px solid #3a3a3a',
+        borderRadius: '4px',
+        padding: '1px 6px',
+        color: '#f0f0f0'
+      }}
+    >
+      {children}
+    </code>
+  )
+};
 
 const AiOverview = ({ aiOverviewData = null, excelPath = '' }) => {
+  const overviewMarkdown = typeof aiOverviewData === 'string' ? aiOverviewData : '';
+
   return (
     <div style={{
       backgroundColor: '#212121', 
@@ -18,8 +52,10 @@ const AiOverview = ({ aiOverviewData = null, excelPath = '' }) => {
         lineHeight: '1.7',
         maxWidth: '850px' // Keep reading length comfortable
       }}>
-        {aiOverviewData ? (
-          <p style={{ margin: '0 0 20px 0' }}>{aiOverviewData}</p>
+        {overviewMarkdown ? (
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {overviewMarkdown}
+          </ReactMarkdown>
         ) : (
           <>
             <p style={{ margin: '0 0 20px 0' }}>
