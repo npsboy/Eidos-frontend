@@ -379,6 +379,27 @@
   background-color: #e0e0e0;
 }
 
+.extracted-data-actions {
+  max-width: 800px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.extracted-data-download-btn {
+  background-color: transparent;
+  border: 1px solid #3a3a3a;
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.extracted-data-download-btn:hover {
+  border-color: #5a5a5a;
+  background-color: #242424;
+}
+
 .stream-panel {
   max-width: 800px;
   border: 1px solid #2a2a2a;
@@ -506,4 +527,42 @@
   border: 1px solid #2b2b2b;
   font-size: 12px;
   text-decoration: none;
+}
+
+@media print {
+  .sidebar {
+    display: none !important;
+  }
+
+  .scope-details-container {
+    background: #ffffff;
+    color: #000000;
+    overflow: visible;
+  }
+
+  .scope-details-content {
+    margin-left: 0;
+    height: auto;
+    overflow: visible;
+  }
+
+  .scope-header,
+  .tabs,
+  .accounts-section,
+  .classification-section,
+  .additional-settings-section,
+  .run-btn-container,
+  .extracted-data-actions,
+  .stream-panel {
+    display: none !important;
+  }
+
+  .scope-body {
+    padding: 0;
+  }
+
+  .extracted-data-page {
+    padding-top: 0 !important;
+    gap: 20px !important;
+  }
 }

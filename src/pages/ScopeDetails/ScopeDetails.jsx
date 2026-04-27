@@ -96,10 +96,51 @@ const renderMessageWithLinks = (message) => {
   });
 };
 
+const formatDateTime = (isoDate) => {
+  if (!isoDate) return 'N/A';
+  const parsed = new Date(isoDate);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return parsed.toLocaleString();
+};
+
+const deriveRunSummary = (payload = {}) => {
+  const rawData = payload.rawData;
+  let postsCount = 0;
+  let accountNames = [];
+
+  if (Array.isArray(rawData)) {
+    postsCount = rawData.length;
+    accountNames = rawData
+      .map((item) => item?.account || item?.accountName || item?.username)
+      .filter(Boolean);
+  } else if (rawData && typeof rawData === 'object') {
+    const entries = Object.entries(rawData);
+    accountNames = entries.map(([account]) => account).filter(Boolean);
+    postsCount = entries.reduce((total, [, value]) => {
+      if (Array.isArray(value)) return total + value.length;
+      if (value && typeof value === 'object' && Array.isArray(value.posts)) return total + value.posts.length;
+      return total;
+    }, 0);
+  }
+
+  if (accountNames.length === 0 && Array.isArray(payload.accounts)) {
+    accountNames = payload.accounts.filter(Boolean);
+  }
+
+  const accountCount = new Set(accountNames).size;
+  return {
+    postsCount,
+    accountCount
+  };
+};
+
+const getExtractedDataStorageKey = (scopeId) => `eidos_scope_extracted_data_${scopeId}`;
+
 const ScopeDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const abortControllerRef = useRef(null);
+  const latestRunSummaryRef = useRef({ postsCount: 0, accountCount: 0 });
   const [scope, setScope] = useState(null);
   const [activeTab, setActiveTab] = useState('settings');
   const [accounts, setAccounts] = useState([]);
@@ -117,6 +158,8 @@ const ScopeDetails = () => {
   const [analysisData, setAnalysisData] = useState(null);
   const [error, setError] = useState(null);
   const [streamEvent, setStreamEvent] = useState(null);
+  const [lastRunAt, setLastRunAt] = useState(null);
+  const [lastRunSummary, setLastRunSummary] = useState({ postsCount: 0, accountCount: 0 });
 
   const [additionalSettings, setAdditionalSettings] = useState({
     aiOverview: true,
@@ -133,9 +176,26 @@ const ScopeDetails = () => {
       if (foundScope) {
         setScope(foundScope);
         setAccounts(foundScope.accountList || []);
+        if (foundScope.lastRunAt) setLastRunAt(foundScope.lastRunAt);
+        setLastRunSummary({
+          postsCount: Number(foundScope.lastRunPostsCount || 0),
+          accountCount: Number(foundScope.lastRunAccountsCount || 0)
+        });
         if (foundScope.intents) setIntents(foundScope.intents);
         if (foundScope.formats) setFormats(foundScope.formats);
         if (foundScope.additionalSettings) setAdditionalSettings(foundScope.additionalSettings);
+
+        const savedExtractedDataRaw = localStorage.getItem(getExtractedDataStorageKey(id));
+        if (savedExtractedDataRaw) {
+          try {
+            const savedExtractedData = JSON.parse(savedExtractedDataRaw);
+            if (savedExtractedData?.data) {
+              setAnalysisData(savedExtractedData.data);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse saved extracted data:', parseError);
+          }
+        }
       } else {
         navigate('/dashboard');
       }
@@ -144,7 +204,7 @@ const ScopeDetails = () => {
     }
   }, [id, navigate]);
 
-const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSettings) => {
+const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSettings, runMeta) => {
     const savedScopes = localStorage.getItem('eidos_scopes');
     if (savedScopes) {
       const parsedScopes = JSON.parse(savedScopes);
@@ -156,12 +216,33 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
               accounts: (newAccounts || accounts).length > 0 ? (newAccounts || accounts).map(a => a.name).join(', ') : 'No accounts added',
               intents: newIntents || intents,
               formats: newFormats || formats,
-              additionalSettings: newAdditionalSettings || additionalSettings
+              additionalSettings: newAdditionalSettings || additionalSettings,
+              lastRunAt: runMeta?.lastRunAt || s.lastRunAt,
+              lastRunPostsCount: runMeta?.postsCount ?? s.lastRunPostsCount,
+              lastRunAccountsCount: runMeta?.accountCount ?? s.lastRunAccountsCount
             }
           : s
       );
       localStorage.setItem('eidos_scopes', JSON.stringify(updatedScopes));
     }
+  };
+
+  const persistLastRun = (runMeta) => {
+    setLastRunAt(runMeta.lastRunAt);
+    setLastRunSummary({
+      postsCount: runMeta.postsCount,
+      accountCount: runMeta.accountCount
+    });
+    setScope((currentScope) => {
+      if (!currentScope) return currentScope;
+      return {
+        ...currentScope,
+        lastRunAt: runMeta.lastRunAt,
+        lastRunPostsCount: runMeta.postsCount,
+        lastRunAccountsCount: runMeta.accountCount
+      };
+    });
+    updateLocalStorage(null, null, null, null, runMeta);
   };
 
   const toggleSetting = (settingKey) => {
@@ -174,6 +255,31 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
     const newSettings = { ...additionalSettings, [settingKey]: value };
     setAdditionalSettings(newSettings);
     updateLocalStorage(null, null, null, newSettings);
+  };
+
+  const persistExtractedData = (data) => {
+    if (!id || !data) return;
+
+    localStorage.setItem(
+      getExtractedDataStorageKey(id),
+      JSON.stringify({
+        savedAt: new Date().toISOString(),
+        data
+      })
+    );
+  };
+
+  const handleDownloadExtractedData = () => {
+    if (!analysisData) return;
+
+    setError(null);
+    setActiveTab('data');
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.print();
+      });
+    });
   };
 
   // Account Handlers
@@ -270,6 +376,7 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
     setAnalysisData(null); // Clear previous data
     setError(null);
     setStreamEvent(null);
+    latestRunSummaryRef.current = { postsCount: 0, accountCount: 0 };
 
     const payload = {
       accounts: accounts.map(a => a.name).filter(Boolean),
@@ -327,19 +434,31 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
           }
 
           if (eventName === 'final') {
+            const summary = deriveRunSummary(parsedData);
+            latestRunSummaryRef.current = summary;
             setAnalysisData(parsedData);
+            persistExtractedData(parsedData);
             setStreamEvent({
               type: 'final',
               title: 'Analysis complete',
-              message: 'Full analysis payload received.'
+              message: `Full analysis payload received. Scraped ${summary.postsCount} posts from ${summary.accountCount} accounts.`
             });
           }
 
           if (eventName === 'done') {
+            const completedAt = new Date().toISOString();
+            const summary = latestRunSummaryRef.current;
+            const runMeta = {
+              lastRunAt: completedAt,
+              postsCount: summary.postsCount,
+              accountCount: summary.accountCount
+            };
+
+            persistLastRun(runMeta);
             setStreamEvent({
               type: 'done',
               title: 'Finished',
-              message: parsedData.message || 'analysis complete'
+              message: `Finished at ${formatDateTime(completedAt)}. Scraped ${summary.postsCount} posts from ${summary.accountCount} accounts.`
             });
           }
         };
@@ -357,6 +476,14 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
       } else {
         const data = await response.json();
         setAnalysisData(data);
+        persistExtractedData(data);
+        const completedAt = new Date().toISOString();
+        const summary = deriveRunSummary(data);
+        persistLastRun({
+          lastRunAt: completedAt,
+          postsCount: summary.postsCount,
+          accountCount: summary.accountCount
+        });
       }
     } catch (err) {
       if (err.name === 'AbortError') return;
@@ -417,7 +544,11 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
         <div className="scope-header">
           <div className="scope-title-area">
             <h1>{scope.name}</h1>
-            <div className="last-run">Last run: 28/07/2025</div>
+            <div className="last-run">
+              {lastRunAt
+                ? `Last run: ${formatDateTime(lastRunAt)} • ${lastRunSummary.postsCount} posts from ${lastRunSummary.accountCount} accounts`
+                : 'Last run: Not run yet'}
+            </div>
           </div>
         </div>
 
@@ -646,6 +777,13 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
               ) : (
                 <div style={{ color: '#8c8c8c', fontSize: '1.2rem', padding: '40px', textAlign: 'center' }}>
                   Run an analysis to view extracted data.
+                </div>
+              )}
+              {analysisData && (
+                <div className="extracted-data-actions">
+                  <button className="extracted-data-download-btn" onClick={handleDownloadExtractedData}>
+                    Print extracted data report
+                  </button>
                 </div>
               )}
             </div>
