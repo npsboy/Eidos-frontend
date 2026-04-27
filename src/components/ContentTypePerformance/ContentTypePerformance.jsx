@@ -28,7 +28,24 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
-const ContentTypePerformance = () => {
+const ContentTypePerformance = ({ reelsPerformance }) => {
+  let reelsVal = 65;
+  let postsVal = 35;
+
+  if (reelsPerformance) {
+    const val = parseFloat(reelsPerformance);
+    if (!isNaN(val)) {
+      // Let's assume reels is 50 + val/2 for pie representation
+      reelsVal = Math.min(100, Math.max(0, 50 + val / 2));
+      postsVal = 100 - reelsVal;
+    }
+  }
+
+  const chartData = [
+    { name: 'Reels', value: reelsVal, color: '#5c8a3f' }, // dark green
+    { name: 'Posts', value: postsVal, color: '#b4cfa1' }, // light green
+  ];
+
   return (
     <div style={{
       backgroundColor: '#212121', // Lighter background color so it stands out against main dashboard #1a1a1a
@@ -42,14 +59,14 @@ const ContentTypePerformance = () => {
       <div style={{ flex: 1, paddingRight: '20px' }}>
         <h2 style={{ color: 'white', margin: '0 0 20px 0', fontSize: '1.4rem', fontWeight: '500' }}>Content Type Performance</h2>
         <p style={{ color: '#8c8c8c', margin: 0, fontSize: '1.1rem', lineHeight: '1.6', maxWidth: '85%' }}>
-          Percentage of likes received for reels vs posts
+          Percentage of likes received for reels vs posts. Reels performed {reelsPerformance || "better"} over posts.
         </p>
       </div>
       <div style={{ flex: 1, height: '320px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart margin={{ top: 20, right: 0, bottom: 0, left: 0 }}>
             <Pie
-              data={data}
+              data={chartData}
               cx="50%"
               cy="50%"
               innerRadius={90}
@@ -60,7 +77,7 @@ const ContentTypePerformance = () => {
               labelLine={false}
               stroke="none"
             >
-              {data.map((entry, index) => (
+              {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>

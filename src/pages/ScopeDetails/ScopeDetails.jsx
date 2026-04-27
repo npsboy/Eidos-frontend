@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Settings, BarChart2, Link as LinkIcon, Trash2, ChevronDown, ChevronUp, Edit2, Plus } from 'lucide-react';
+import { Settings, Link as LinkIcon, Trash2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import ClassificationPerformanceChart, { intentDummyData, formatDummyData } from '../../components/ClassificationPerformanceChart/ClassificationPerformanceChart';
 import TopPerformer from '../../components/TopPerformer/TopPerformer';
@@ -29,9 +29,52 @@ const defaultFormats = [
   { id: 'f8', name: 'event', isEditing: false }
 ];
 
+const streamStageLabels = {
+  extracting_posts: 'Extracting posts',
+  analyzing_post: 'Analyzing post',
+  analyzing_data: 'Analyzing data'
+};
+
+const parseSseChunk = (chunk, onEvent) => {
+  const events = [];
+  let cursor = 0;
+
+  while (cursor < chunk.length) {
+    const separatorIndex = chunk.indexOf('\n\n', cursor);
+    if (separatorIndex === -1) break;
+
+    const block = chunk.slice(cursor, separatorIndex).trim();
+    cursor = separatorIndex + 2;
+
+    if (!block) continue;
+
+    let eventName = 'message';
+    const dataLines = [];
+
+    for (const line of block.split(/\r?\n/)) {
+      if (line.startsWith('event:')) {
+        eventName = line.slice(6).trim();
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trim());
+      }
+    }
+
+    if (dataLines.length > 0) {
+      events.push({ eventName, data: dataLines.join('\n') });
+    }
+  }
+
+  if (events.length > 0) {
+    events.forEach(onEvent);
+  }
+
+  return chunk.slice(cursor);
+};
+
 const ScopeDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const abortControllerRef = useRef(null);
   const [scope, setScope] = useState(null);
   const [activeTab, setActiveTab] = useState('settings');
   const [accounts, setAccounts] = useState([]);
@@ -44,6 +87,11 @@ const ScopeDetails = () => {
   
   const [intentEditing, setIntentEditing] = useState(false);
   const [formatEditing, setFormatEditing] = useState(false);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [analysisData, setAnalysisData] = useState(null);
+  const [error, setError] = useState(null);
+  const [streamEvents, setStreamEvents] = useState([]);
 
   const [additionalSettings, setAdditionalSettings] = useState({
     aiOverview: true,
@@ -182,6 +230,129 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
 
   const handleItemKeyDown = (e, type, itemId) => {
     if (e.key === 'Enter') finishEditingItem(type, itemId);
+  };
+
+  const handleRun = async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setIsLoading(true);
+    setActiveTab('data');
+    setAnalysisData(null); // Clear previous data
+    setError(null);
+    setStreamEvents([]);
+
+    const payload = {
+      accounts: accounts.map(a => a.name).filter(Boolean),
+      maxPosts: additionalSettings.maxPostsPerAccount || 3,
+      includeAiOverview: additionalSettings.aiOverview || false,
+      categories: {
+        intent: intents.map(i => i.name).filter(Boolean),
+        format: formats.map(f => f.name).filter(Boolean)
+      }
+    };
+
+    try {
+      const response = await fetch('https://site--eidos--hp9jvjg6qc6c.code.run/api/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
+        },
+        signal: controller.signal,
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/event-stream') && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const handleStreamEvent = ({ eventName, data }) => {
+          if (!data) return;
+
+          let parsedData;
+          try {
+            parsedData = JSON.parse(data);
+          } catch (parseError) {
+            console.error('Unable to parse SSE payload:', parseError);
+            return;
+          }
+
+          if (eventName === 'progress') {
+            setStreamEvents((currentEvents) => [
+              ...currentEvents,
+              {
+                id: `${Date.now()}-${currentEvents.length}`,
+                type: 'progress',
+                stage: parsedData.stage,
+                title: streamStageLabels[parsedData.stage] || parsedData.stage || 'Progress update',
+                message: parsedData.message || 'Working...',
+                account: parsedData.account,
+                postNumber: parsedData.postNumber,
+                link: parsedData.link
+              }
+            ]);
+            return;
+          }
+
+          if (eventName === 'final') {
+            setAnalysisData(parsedData);
+            setStreamEvents((currentEvents) => [
+              ...currentEvents,
+              {
+                id: `${Date.now()}-${currentEvents.length}`,
+                type: 'final',
+                title: 'Analysis complete',
+                message: 'Full analysis payload received.'
+              }
+            ]);
+          }
+
+          if (eventName === 'done') {
+            setStreamEvents((currentEvents) => [
+              ...currentEvents,
+              {
+                id: `${Date.now()}-${currentEvents.length}`,
+                type: 'done',
+                title: 'Finished',
+                message: parsedData.message || 'analysis complete'
+              }
+            ]);
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          buffer = parseSseChunk(buffer, handleStreamEvent);
+        }
+
+        buffer += decoder.decode();
+        parseSseChunk(buffer, handleStreamEvent);
+      } else {
+        const data = await response.json();
+        setAnalysisData(data);
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error("Error analyzing data:", err);
+      setError(err.message || 'An error occurred during analysis.');
+    } finally {
+      setIsLoading(false);
+      abortControllerRef.current = null;
+    }
   };
 
   const renderCategoryList = (type, items, expanded, editing) => {
@@ -384,16 +555,79 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
               </div>
 
               <div className="run-btn-container">
-                <button className="run-btn">Run</button>
+                <button className="run-btn" onClick={handleRun} disabled={isLoading}>
+                  {isLoading ? 'Running...' : 'Run'}
+                </button>
               </div>
             </>
           ) : (
             <div className="extracted-data-page" style={{ paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '30px' }}>
-              <ClassificationPerformanceChart title="Intent Performance" data={intentDummyData} />
-              <ClassificationPerformanceChart title="Format Performance" data={formatDummyData} />
-              <TopPerformer />
-              <ContentTypePerformance />
-              <AiOverview />
+              {streamEvents.length > 0 && (
+                <div className="stream-panel">
+                  <div className="stream-panel-header">
+                    <div>
+                      <div className="stream-panel-title">Live progress</div>
+                      <div className="stream-panel-subtitle">Streaming status from /api/analyze</div>
+                    </div>
+                    {isLoading && <div className="stream-panel-badge">Streaming</div>}
+                  </div>
+                  <div className="stream-event-list">
+                    {streamEvents.map((event) => (
+                      <div key={event.id} className={`stream-event stream-event-${event.type}`}>
+                        <div className="stream-event-head">
+                          <span className="stream-event-title">{event.title}</span>
+                          {event.stage && <span className="stream-event-stage">{event.stage}</span>}
+                        </div>
+                        <div className="stream-event-message">{event.message}</div>
+                        {(event.account || event.postNumber || event.link) && (
+                          <div className="stream-event-meta">
+                            {event.account && <span>{event.account}</span>}
+                            {event.postNumber && <span>Post {event.postNumber}</span>}
+                            {event.link && <span>{event.link}</span>}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {isLoading ? (
+                <div style={{ color: 'white', fontSize: '1.2rem', padding: '40px' }}>Loading analysis...</div>
+              ) : error ? (
+                <div style={{ color: '#ff6b6b', fontSize: '1.2rem', padding: '40px', textAlign: 'center' }}>
+                  {error}
+                </div>
+              ) : analysisData && analysisData.analysis ? (
+                <>
+                  <ClassificationPerformanceChart 
+                    title="Intent Performance" 
+                    data={Object.entries(analysisData.analysis.global_insights?.intent_insights || {}).map(([name, data]) => ({
+                      name,
+                      winRate: parseFloat(data.account_relative_win_rate?.likes || 0),
+                      avgRelativeLikes: parseFloat(data.global_relative_performance_average?.likes || 0),
+                      medianRelativeLikes: parseFloat(data.global_relative_performance_median?.likes || 0),
+                      avgRelativeComments: parseFloat(data.global_relative_performance_average?.comments || 0)
+                    }))} 
+                  />
+                  <ClassificationPerformanceChart 
+                    title="Format Performance" 
+                    data={Object.entries(analysisData.analysis.global_insights?.format_insights || {}).map(([name, data]) => ({
+                      name,
+                      winRate: parseFloat(data.account_relative_win_rate?.likes || 0),
+                      avgRelativeLikes: parseFloat(data.global_relative_performance_average?.likes || 0),
+                      medianRelativeLikes: parseFloat(data.global_relative_performance_median?.likes || 0),
+                      avgRelativeComments: parseFloat(data.global_relative_performance_average?.comments || 0)
+                    }))} 
+                  />
+                  <TopPerformer account={analysisData.analysis.additional_insights?.topPerformer?.account} frequency={analysisData.analysis.additional_insights?.topPerformer?.frequency} />
+                  <ContentTypePerformance reelsPerformance={analysisData.analysis.additional_insights?.reelsPerformanceOverPosts} />
+                  <AiOverview aiOverviewData={analysisData.aiOverview} excelPath={analysisData.excelPath} />
+                </>
+              ) : (
+                <div style={{ color: '#8c8c8c', fontSize: '1.2rem', padding: '40px', textAlign: 'center' }}>
+                  Run an analysis to view extracted data.
+                </div>
+              )}
             </div>
           )}
         </div>
