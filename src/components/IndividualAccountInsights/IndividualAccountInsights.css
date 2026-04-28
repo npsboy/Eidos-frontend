@@ -1,0 +1,62 @@
+.individual-account-insights {
+  background-color: #212121;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.insights-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background-color: #2a2a2a;
+  border-bottom: 1px solid #333;
+}
+
+.insights-header h2 {
+  margin: 0;
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.insights-header svg {
+  color: #8c8c8c;
+}
+
+.insights-header:hover {
+  background-color: #333;
+}
+
+.account-navbar {
+  display: flex;
+  background-color: #2a2a2a;
+  border-bottom: 1px solid #333;
+}
+
+.account-nav-item {
+  padding: 12px 24px;
+  cursor: pointer;
+  color: #8c8c8c;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.account-nav-item:hover {
+  color: white;
+}
+
+.account-nav-item.selected {
+  background-color: #8c8c8c;
+  color: #212121;
+  font-weight: 500;
+}
+
+.account-charts {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}

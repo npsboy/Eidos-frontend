@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Settings, Link as LinkIcon, Trash2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
 import Sidebar from '../../components/Sidebar/Sidebar';
 import ClassificationPerformanceChart from '../../components/ClassificationPerformanceChart/ClassificationPerformanceChart';
+import IndividualAccountInsights from '../../components/IndividualAccountInsights/IndividualAccountInsights';
 import TopPerformer from '../../components/TopPerformer/TopPerformer';
 import ContentTypePerformance from '../../components/ContentTypePerformance/ContentTypePerformance';
 import AiOverview from '../../components/AiOverview/AiOverview';
@@ -770,6 +771,10 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
                       medianRelativeLikes: parseFloat(data.global_relative_performance_median?.likes || 0),
                       avgRelativeComments: parseFloat(data.global_relative_performance_average?.comments || 0)
                     }))} 
+                  />
+                  <IndividualAccountInsights 
+                    accounts={analysisData.accounts}
+                    accountAnalysisData={analysisData.analysis.account_analysis}
                   />
                   <TopPerformer account={analysisData.analysis.additional_insights?.topPerformer?.account} frequency={analysisData.analysis.additional_insights?.topPerformer?.frequency} />
                   <ContentTypePerformance reelsPerformance={analysisData.analysis.additional_insights?.reelsPerformanceOverPosts} />
