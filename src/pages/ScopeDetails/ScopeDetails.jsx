@@ -374,6 +374,7 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
     setIsLoading(true);
     setActiveTab('data');
     setAnalysisData(null); // Clear previous data
+    localStorage.removeItem(getExtractedDataStorageKey(id)); // Clear locally stored extracted data
     setError(null);
     setStreamEvent(null);
     latestRunSummaryRef.current = { postsCount: 0, accountCount: 0 };
@@ -772,7 +773,7 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
                   />
                   <TopPerformer account={analysisData.analysis.additional_insights?.topPerformer?.account} frequency={analysisData.analysis.additional_insights?.topPerformer?.frequency} />
                   <ContentTypePerformance reelsPerformance={analysisData.analysis.additional_insights?.reelsPerformanceOverPosts} />
-                  <AiOverview aiOverviewData={analysisData.aiOverview} excelPath={analysisData.excelPath} />
+                  {analysisData.aiOverview && <AiOverview aiOverviewData={analysisData.aiOverview} excelPath={analysisData.excelPath} />}
                 </>
               ) : (
                 <div style={{ color: '#8c8c8c', fontSize: '1.2rem', padding: '40px', textAlign: 'center' }}>
