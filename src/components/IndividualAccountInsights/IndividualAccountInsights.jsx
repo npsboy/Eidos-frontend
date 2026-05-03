@@ -43,6 +43,7 @@ const IndividualAccountInsights = ({ accounts, accountAnalysisData }) => {
             <div className="account-charts">
               <ClassificationPerformanceChart 
                 title="Intent Performance" 
+                showWinRate={false}
                 data={Object.entries(accountAnalysisData[selectedAccount].intentDistribution || {}).map(([name, data]) => ({
                   name,
                   winRate: data.relative_performance?.winRate ? parseFloat(data.relative_performance.winRate) : 0,
@@ -53,6 +54,7 @@ const IndividualAccountInsights = ({ accounts, accountAnalysisData }) => {
               />
               <ClassificationPerformanceChart 
                 title="Format Performance" 
+                showWinRate={false}
                 data={Object.entries(accountAnalysisData[selectedAccount].formatDistribution || {}).map(([name, data]) => ({
                   name,
                   winRate: data.relative_performance?.winRate ? parseFloat(data.relative_performance.winRate) : 0,

@@ -174,14 +174,33 @@ const getYAxisDomain = (data) => {
   return [lower, upper];
 };
 
-// Custom toolip to display Win Rate along with other metrics
-const CustomTooltip = ({ active, payload, label, data }) => {
+const DoughnutLegendIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
+    <circle cx="7" cy="7" r="5" fill="none" stroke={colors.pieBg} strokeWidth="2" />
+    <circle
+      cx="7"
+      cy="7"
+      r="5"
+      fill="none"
+      stroke={colors.pieFill}
+      strokeWidth="2"
+      strokeDasharray="18 14"
+      transform="rotate(-90 7 7)"
+    />
+    <circle cx="7" cy="7" r="2.2" fill={colors.background} />
+  </svg>
+);
+
+// Custom tooltip to display Win Rate along with other metrics
+const CustomTooltip = ({ active, payload, label, data, showWinRate }) => {
   if (active && payload && payload.length) {
     const dataItem = data.find(d => d.name === label);
     return (
       <div style={{ backgroundColor: '#2a2a2a', padding: '10px', border: '1px solid #444', borderRadius: '4px', color: 'white' }}>
         <p style={{ margin: '0 0 8px 0', fontWeight: 'bold' }}>{label}</p>
-        <p style={{ margin: '0 0 4px 0', color: '#6ab0f3' }}>Win Rate: {toPercent(dataItem?.winRate ?? 0)}</p>
+        {showWinRate && (
+          <p style={{ margin: '0 0 4px 0', color: '#6ab0f3' }}>Win Rate: {toPercent(dataItem?.winRate ?? 0)}</p>
+        )}
         {payload.map((entry, index) => (
           <p key={`item-${index}`} style={{ margin: '0 0 4px 0', color: entry.color }}>
             {entry.name}: {toPercent(entry.value)}
@@ -196,9 +215,9 @@ const CustomTooltip = ({ active, payload, label, data }) => {
 
 // Custom axis tick to render the pie chart above the labels
 const CustomTick = (props) => {
-  const { x, y, payload, data } = props;
+  const { x, y, payload, data, showWinRate } = props;
   const dataItem = data.find(d => d.name === payload.value);
-  const winRate = dataItem ? dataItem.winRate : 0;
+  const winRate = showWinRate && dataItem ? dataItem.winRate : 0;
   
   // Format labels to break on spaces if fairly long
   const words = payload.value.split(' ');
@@ -219,41 +238,39 @@ const CustomTick = (props) => {
 
   return (
     <g transform={`translate(${x},${y})`}>
-      {/* Container for Pie Chart */}
-      <g transform={`translate(0, -65)`}>
-        {/* Background circle */}
-        <circle 
-          cx="0" 
-          cy="0" 
-          r={radius} 
-          fill="transparent" 
-          stroke={colors.pieBg} 
-          strokeWidth="6"
-        />
-        {/* Filled portion of pie chart */}
-        <circle 
-          cx="0" 
-          cy="0" 
-          r={radius} 
-          fill="transparent" 
-          stroke={colors.pieFill} 
-          strokeWidth="6"
-          strokeDasharray={strokeDasharray}
-          transform="rotate(-90 0 0)"
-        />
-        {/* Label inside pie chart */}
-        <text 
-          x="0" 
-          y="0" 
-          dy="4" 
-          textAnchor="middle" 
-          fill="white" 
-          fontSize="12" 
-          fontWeight="bold"
-        >
-          {winRate}%
-        </text>
-      </g>
+      {showWinRate && (
+        <g transform={`translate(0, -65)`}>
+          <circle 
+            cx="0" 
+            cy="0" 
+            r={radius} 
+            fill="transparent" 
+            stroke={colors.pieBg} 
+            strokeWidth="6"
+          />
+          <circle 
+            cx="0" 
+            cy="0" 
+            r={radius} 
+            fill="transparent" 
+            stroke={colors.pieFill} 
+            strokeWidth="6"
+            strokeDasharray={strokeDasharray}
+            transform="rotate(-90 0 0)"
+          />
+          <text 
+            x="0" 
+            y="0" 
+            dy="4" 
+            textAnchor="middle" 
+            fill="white" 
+            fontSize="12" 
+            fontWeight="bold"
+          >
+            {winRate}%
+          </text>
+        </g>
+      )}
       
       {/* X-Axis Text Label */}
       {line2 ? (
@@ -277,7 +294,7 @@ const CustomTick = (props) => {
   );
 };
 
-const CustomLegend = () => {
+const CustomLegend = ({ showWinRate }) => {
   const items = [
     { label: 'Avg Relative Likes', color: colors.avgRelativeLikes },
     { label: 'Median Relative Likes', color: colors.medianRelativeLikes },
@@ -287,6 +304,12 @@ const CustomLegend = () => {
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', justifyContent: 'center', paddingTop: '20px' }}>
+      {showWinRate && (
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#a9a9a9', fontSize: '14px' }}>
+          <DoughnutLegendIcon />
+          <span>Win Rate (% of brands that got a positive lift)</span>
+        </div>
+      )}
       {items.map((item) => (
         <div key={item.label} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#a9a9a9', fontSize: '14px' }}>
           <span style={{ width: '12px', height: '12px', borderRadius: '2px', backgroundColor: item.color }} />
@@ -297,7 +320,7 @@ const CustomLegend = () => {
   );
 };
 
-export const ClassificationPerformanceChart = ({ title = "Intent Performance", data = intentDummyData }) => {
+export const ClassificationPerformanceChart = ({ title = "Intent Performance", data = intentDummyData, showWinRate = true }) => {
   const normalizedData = useMemo(() => {
     const baseRows = data.map((item) => ({
       ...item,
@@ -346,7 +369,7 @@ export const ClassificationPerformanceChart = ({ title = "Intent Performance", d
             orientation="top"
             axisLine={false}
             tickLine={false}
-            tick={(props) => <CustomTick {...props} data={normalizedData} />}
+            tick={(props) => <CustomTick {...props} data={normalizedData} showWinRate={showWinRate} />}
             interval={0}
           />
           
@@ -360,11 +383,11 @@ export const ClassificationPerformanceChart = ({ title = "Intent Performance", d
           
           <Tooltip 
             cursor={{fill: 'rgba(255,255,255,0.05)'}}
-            content={(props) => <CustomTooltip {...props} data={normalizedData} />}
+            content={(props) => <CustomTooltip {...props} data={normalizedData} showWinRate={showWinRate} />}
           />
           
           <Legend 
-            content={<CustomLegend />}
+            content={<CustomLegend showWinRate={showWinRate} />}
           />
           
           <Bar dataKey="avgRelativeLikes" name="Avg Relative Likes" barSize={20} minPointSize={3}>
