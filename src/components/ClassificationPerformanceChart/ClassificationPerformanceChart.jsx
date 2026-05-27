@@ -134,6 +134,10 @@ const colors = {
 
 const metricKeys = ['avgRelativeLikes', 'medianRelativeLikes', 'avgRelativeComments'];
 
+const getVisibleMetricKeys = (showMedianRelativeLikes) => {
+  return showMedianRelativeLikes ? metricKeys : ['avgRelativeLikes', 'avgRelativeComments'];
+};
+
 const toNumeric = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string') {
@@ -156,8 +160,8 @@ const getScaleForField = (rows, key) => {
   return Math.max(...nonZeroValues) <= 1 ? 100 : 1;
 };
 
-const getYAxisDomain = (data) => {
-  const values = data.flatMap((item) => metricKeys.map((key) => toNumeric(item[key])));
+const getYAxisDomain = (data, visibleMetricKeys) => {
+  const values = data.flatMap((item) => visibleMetricKeys.map((key) => toNumeric(item[key])));
   if (values.length === 0) return [-10, 10];
 
   const min = Math.min(0, ...values);
@@ -294,13 +298,16 @@ const CustomTick = (props) => {
   );
 };
 
-const CustomLegend = ({ showWinRate }) => {
+const CustomLegend = ({ showWinRate, showMedianRelativeLikes }) => {
   const items = [
     { label: 'Avg Relative Likes', color: colors.avgRelativeLikes },
-    { label: 'Median Relative Likes', color: colors.medianRelativeLikes },
     { label: 'Avg Relative Comments', color: colors.avgRelativeComments },
     { label: 'Negative Values Accent', color: colors.avgRelativeLikesNegative }
   ];
+
+  if (showMedianRelativeLikes) {
+    items.splice(1, 0, { label: 'Median Relative Likes', color: colors.medianRelativeLikes });
+  }
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', justifyContent: 'center', paddingTop: '20px' }}>
@@ -320,20 +327,27 @@ const CustomLegend = ({ showWinRate }) => {
   );
 };
 
-export const ClassificationPerformanceChart = ({ title = "Intent Performance", data = intentDummyData, showWinRate = true }) => {
+export const ClassificationPerformanceChart = ({
+  title = "Intent Performance",
+  data = intentDummyData,
+  showWinRate = true,
+  showMedianRelativeLikes = true
+}) => {
+  const visibleMetricKeys = getVisibleMetricKeys(showMedianRelativeLikes);
+
   const normalizedData = useMemo(() => {
     const baseRows = data.map((item) => ({
       ...item,
       winRate: toNumeric(item.winRate),
       avgRelativeLikes: toNumeric(item.avgRelativeLikes),
-      medianRelativeLikes: toNumeric(item.medianRelativeLikes),
+      medianRelativeLikes: showMedianRelativeLikes ? toNumeric(item.medianRelativeLikes) : 0,
       avgRelativeComments: toNumeric(item.avgRelativeComments)
     }));
 
     const winRateScale = getScaleForField(baseRows, 'winRate');
     const metricScales = {
       avgRelativeLikes: getScaleForField(baseRows, 'avgRelativeLikes'),
-      medianRelativeLikes: getScaleForField(baseRows, 'medianRelativeLikes'),
+      medianRelativeLikes: showMedianRelativeLikes ? getScaleForField(baseRows, 'medianRelativeLikes') : 1,
       avgRelativeComments: getScaleForField(baseRows, 'avgRelativeComments')
     };
 
@@ -341,12 +355,12 @@ export const ClassificationPerformanceChart = ({ title = "Intent Performance", d
       ...item,
       winRate: item.winRate * winRateScale,
       avgRelativeLikes: item.avgRelativeLikes * metricScales.avgRelativeLikes,
-      medianRelativeLikes: item.medianRelativeLikes * metricScales.medianRelativeLikes,
+      medianRelativeLikes: showMedianRelativeLikes ? item.medianRelativeLikes * metricScales.medianRelativeLikes : 0,
       avgRelativeComments: item.avgRelativeComments * metricScales.avgRelativeComments
     }));
-  }, [data]);
+  }, [data, showMedianRelativeLikes]);
 
-  const [yMin, yMax] = useMemo(() => getYAxisDomain(normalizedData), [normalizedData]);
+  const [yMin, yMax] = useMemo(() => getYAxisDomain(normalizedData, visibleMetricKeys), [normalizedData, visibleMetricKeys]);
 
   return (
     <div style={{ width: '100%', height: '550px', backgroundColor: colors.background, padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
@@ -387,7 +401,7 @@ export const ClassificationPerformanceChart = ({ title = "Intent Performance", d
           />
           
           <Legend 
-            content={<CustomLegend showWinRate={showWinRate} />}
+            content={<CustomLegend showWinRate={showWinRate} showMedianRelativeLikes={showMedianRelativeLikes} />}
           />
           
           <Bar dataKey="avgRelativeLikes" name="Avg Relative Likes" barSize={20} minPointSize={3}>
@@ -398,14 +412,16 @@ export const ClassificationPerformanceChart = ({ title = "Intent Performance", d
               />
             ))}
           </Bar>
-          <Bar dataKey="medianRelativeLikes" name="Median Relative Likes" barSize={20} minPointSize={3}>
-            {normalizedData.map((entry, index) => (
-              <Cell
-                key={`medianRelativeLikes-${entry.name}-${index}`}
-                fill={entry.medianRelativeLikes < 0 ? colors.medianRelativeLikesNegative : colors.medianRelativeLikes}
-              />
-            ))}
-          </Bar>
+          {showMedianRelativeLikes && (
+            <Bar dataKey="medianRelativeLikes" name="Median Relative Likes" barSize={20} minPointSize={3}>
+              {normalizedData.map((entry, index) => (
+                <Cell
+                  key={`medianRelativeLikes-${entry.name}-${index}`}
+                  fill={entry.medianRelativeLikes < 0 ? colors.medianRelativeLikesNegative : colors.medianRelativeLikes}
+                />
+              ))}
+            </Bar>
+          )}
           <Bar dataKey="avgRelativeComments" name="Avg Relative Comments" barSize={20} minPointSize={3}>
             {normalizedData.map((entry, index) => (
               <Cell
