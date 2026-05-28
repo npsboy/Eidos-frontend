@@ -6,6 +6,7 @@ import ClassificationPerformanceChart from '../../components/ClassificationPerfo
 import IndividualAccountInsights from '../../components/IndividualAccountInsights/IndividualAccountInsights';
 import TopPerformer from '../../components/TopPerformer/TopPerformer';
 import ContentTypePerformance from '../../components/ContentTypePerformance/ContentTypePerformance';
+import TimeOfDayEngagement from '../../components/TimeOfDayEngagement/TimeOfDayEngagement';
 import AiOverview from '../../components/AiOverview/AiOverview';
 import './ScopeDetails.css';
 
@@ -778,6 +779,7 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
                   />
                   <TopPerformer account={analysisData.analysis.additional_insights?.topPerformer?.account} frequency={analysisData.analysis.additional_insights?.topPerformer?.frequency} />
                   <ContentTypePerformance reelsPerformance={analysisData.analysis.additional_insights?.reelsPerformanceOverPosts} />
+                  <TimeOfDayEngagement timeOfDayEngagement={analysisData.analysis.additional_insights?.timeOfDayEngagement} />
                   {analysisData.aiOverview && <AiOverview aiOverviewData={analysisData.aiOverview} excelPath={analysisData.excelPath} />}
                 </>
               ) : (
