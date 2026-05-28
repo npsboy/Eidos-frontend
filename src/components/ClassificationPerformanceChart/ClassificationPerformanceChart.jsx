@@ -178,6 +178,20 @@ const getYAxisDomain = (data, visibleMetricKeys) => {
   return [lower, upper];
 };
 
+const normalizeCategoryName = (value) => String(value ?? '').trim().toLowerCase().replace(/[_\s]+/g, ' ');
+
+const getCategoryDefinition = (categoryDefinitions, categoryType, categoryName) => {
+  const group = categoryType ? categoryDefinitions?.[categoryType] : categoryDefinitions;
+  if (!group || !categoryName) return '';
+
+  const directMatch = group[categoryName];
+  if (typeof directMatch === 'string') return directMatch;
+
+  const normalizedCategoryName = normalizeCategoryName(categoryName);
+  const matchedEntry = Object.entries(group).find(([key]) => normalizeCategoryName(key) === normalizedCategoryName);
+  return matchedEntry ? String(matchedEntry[1] ?? '') : '';
+};
+
 const DoughnutLegendIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" focusable="false">
     <circle cx="7" cy="7" r="5" fill="none" stroke={colors.pieBg} strokeWidth="2" />
@@ -219,9 +233,10 @@ const CustomTooltip = ({ active, payload, label, data, showWinRate }) => {
 
 // Custom axis tick to render the pie chart above the labels
 const CustomTick = (props) => {
-  const { x, y, payload, data, showWinRate } = props;
+  const { x, y, payload, data, showWinRate, categoryDefinitions, categoryType } = props;
   const dataItem = data.find(d => d.name === payload.value);
   const winRate = showWinRate && dataItem ? dataItem.winRate : 0;
+  const categoryDefinition = getCategoryDefinition(categoryDefinitions, categoryType, payload.value);
   
   // Format labels to break on spaces if fairly long
   const words = payload.value.split(' ');
@@ -277,20 +292,41 @@ const CustomTick = (props) => {
       )}
       
       {/* X-Axis Text Label */}
-      {line2 ? (
-        <>
-          <text x={0} y={-24} textAnchor="middle" fill={colors.text} fontSize="12">
-            {line1}
-          </text>
-          <text x={0} y={-10} textAnchor="middle" fill={colors.text} fontSize="12">
-            {line2}
-          </text>
-        </>
-      ) : (
-        <text x={0} y={-18} textAnchor="middle" fill={colors.text} fontSize="12">
-          {payload.value}
-        </text>
-      )}
+      <foreignObject
+        x={-78}
+        y={line2 ? -40 : -30}
+        width={156}
+        height={line2 ? 42 : 26}
+        overflow="visible"
+      >
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '4px',
+            color: colors.text,
+            fontSize: '12px',
+            lineHeight: '1.15',
+            textAlign: 'right',
+            overflow: 'visible'
+          }}
+        >
+          <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+            <span>{line1}</span>
+            {line2 && <span>{line2}</span>}
+          </span>
+          {categoryDefinition && (
+            <img
+              src="/icons/info_icon.png"
+              alt=""
+              title={categoryDefinition}
+              style={{ width: '12px', height: '12px', marginTop: line2 ? '0' : '1px', cursor: 'help', flexShrink: 0 }}
+            />
+          )}
+        </div>
+      </foreignObject>
       
       {/* Target line indicating the baseline for the top labels */}
       <line x1="-50" y1="-2" x2="50" y2="-2" stroke={colors.grid} strokeWidth="1" />
@@ -331,7 +367,9 @@ export const ClassificationPerformanceChart = ({
   title = "Intent Performance",
   data = intentDummyData,
   showWinRate = true,
-  showMedianRelativeLikes = true
+  showMedianRelativeLikes = true,
+  categoryDefinitions = null,
+  categoryType = null
 }) => {
   const visibleMetricKeys = getVisibleMetricKeys(showMedianRelativeLikes);
 
@@ -383,7 +421,15 @@ export const ClassificationPerformanceChart = ({
             orientation="top"
             axisLine={false}
             tickLine={false}
-            tick={(props) => <CustomTick {...props} data={normalizedData} showWinRate={showWinRate} />}
+            tick={(props) => (
+              <CustomTick
+                {...props}
+                data={normalizedData}
+                showWinRate={showWinRate}
+                categoryDefinitions={categoryDefinitions}
+                categoryType={categoryType}
+              />
+            )}
             interval={0}
           />
           

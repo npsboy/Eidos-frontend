@@ -163,6 +163,8 @@ const ScopeDetails = () => {
   const [lastRunAt, setLastRunAt] = useState(null);
   const [lastRunSummary, setLastRunSummary] = useState({ postsCount: 0, accountCount: 0 });
 
+  const categoryDefinitions = analysisData?.categoryDefenitions ?? analysisData?.categoryDefinitions ?? analysisData?.analysis?.categoryDefenitions ?? analysisData?.analysis?.categoryDefinitions ?? null;
+
   const [additionalSettings, setAdditionalSettings] = useState({
     aiOverview: true,
     postingTimes: true,
@@ -761,7 +763,9 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
                       avgRelativeLikes: parseFloat(data.global_relative_performance_average?.likes || 0),
                       medianRelativeLikes: parseFloat(data.global_relative_performance_median?.likes || 0),
                       avgRelativeComments: parseFloat(data.global_relative_performance_average?.comments || 0)
-                    }))} 
+                    }))}
+                    categoryDefinitions={categoryDefinitions}
+                    categoryType="intent"
                   />
                   <ClassificationPerformanceChart 
                     title="Format Performance" 
@@ -771,11 +775,14 @@ const updateLocalStorage = (newAccounts, newIntents, newFormats, newAdditionalSe
                       avgRelativeLikes: parseFloat(data.global_relative_performance_average?.likes || 0),
                       medianRelativeLikes: parseFloat(data.global_relative_performance_median?.likes || 0),
                       avgRelativeComments: parseFloat(data.global_relative_performance_average?.comments || 0)
-                    }))} 
+                    }))}
+                    categoryDefinitions={categoryDefinitions}
+                    categoryType="format"
                   />
                   <IndividualAccountInsights 
                     accounts={analysisData.accounts}
                     accountAnalysisData={analysisData.analysis.account_analysis}
+                    categoryDefinitions={categoryDefinitions}
                   />
                   <TopPerformer account={analysisData.analysis.additional_insights?.topPerformer?.account} frequency={analysisData.analysis.additional_insights?.topPerformer?.frequency} />
                   <ContentTypePerformance reelsPerformance={analysisData.analysis.additional_insights?.reelsPerformanceOverPosts} />

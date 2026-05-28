@@ -23,7 +23,7 @@ const calculateReachToInteractionRatio = (followersCount, averageLikes) => {
   return averageLikes / followersCount;
 };
 
-const IndividualAccountInsights = ({ accounts, accountAnalysisData }) => {
+const IndividualAccountInsights = ({ accounts, accountAnalysisData, categoryDefinitions }) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [selectedAccount, setSelectedAccount] = useState(accounts && accounts.length > 0 ? accounts[0] : null);
 
@@ -92,6 +92,8 @@ const IndividualAccountInsights = ({ accounts, accountAnalysisData }) => {
                 title="Intent Performance" 
                 showWinRate={false}
                 showMedianRelativeLikes={false}
+                categoryDefinitions={categoryDefinitions}
+                categoryType="intent"
                 data={Object.entries(accountAnalysisData[selectedAccount].intentDistribution || {}).map(([name, data]) => ({
                   name,
                   winRate: data.relative_performance?.winRate ? parseFloat(data.relative_performance.winRate) : 0,
@@ -104,6 +106,8 @@ const IndividualAccountInsights = ({ accounts, accountAnalysisData }) => {
                 title="Format Performance" 
                 showWinRate={false}
                 showMedianRelativeLikes={false}
+                categoryDefinitions={categoryDefinitions}
+                categoryType="format"
                 data={Object.entries(accountAnalysisData[selectedAccount].formatDistribution || {}).map(([name, data]) => ({
                   name,
                   winRate: data.relative_performance?.winRate ? parseFloat(data.relative_performance.winRate) : 0,
