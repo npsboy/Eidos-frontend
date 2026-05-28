@@ -37,14 +37,10 @@ const IndividualAccountInsights = ({ accounts, accountAnalysisData }) => {
 
   const selectedAccountData = selectedAccount ? accountAnalysisData[selectedAccount] : null;
   const followersCount = parseMetricValue(selectedAccountData?.followersCount ?? selectedAccountData?.followers_count ?? 0);
-  const averageLikes = parseMetricValue(
-    selectedAccountData?.averageLikesComments?.avgLikes ??
-      selectedAccountData?.avg_likes ??
-      selectedAccountData?.avgLikes ??
-      selectedAccountData?.average_likes ??
-      0
-  );
-  const reachToInteractionRatio = calculateReachToInteractionRatio(followersCount, averageLikes);
+  const averageLikes = parseMetricValue(selectedAccountData?.averageLikesComments?.avgLikes ?? 0);
+  const averageComments = parseMetricValue(selectedAccountData?.averageLikesComments?.avgComments ?? 0);
+  const averageEngagement = averageLikes + averageComments;
+  const engagementRate = calculateReachToInteractionRatio(followersCount, averageEngagement);
 
   return (
     <div className="individual-account-insights">
@@ -79,16 +75,16 @@ const IndividualAccountInsights = ({ accounts, accountAnalysisData }) => {
                 </div>
 
                 <div className="followers-summary">
-                  <span className="summary-label">Average likes</span>
-                  <span className="summary-value">{formatNumber(averageLikes)}</span>
+                  <span className="summary-label">Average engagement</span>
+                  <span className="summary-value">{formatNumber(averageEngagement)}</span>
                 </div>
 
                 <div className="ratio-summary">
                   <div className="ratio-summary-copy">
-                    <span className="summary-label">Reach to interaction ratio</span>
-                    <span className="summary-helper">avg_likes / followersCount</span>
+                    <span className="summary-label">Engagement rate</span>
+                    <span className="summary-helper">average interaction / followersCount</span>
                   </div>
-                  <span className="ratio-value">{reachToInteractionRatio.toFixed(4)}</span>
+                  <span className="ratio-value">{engagementRate.toFixed(4)}</span>
                 </div>
               </div>
 
