@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -132,10 +132,35 @@ const colors = {
   pieFill: '#2b5a8c' // blue for the pie chart
 };
 
-const metricKeys = ['avgRelativeLikes', 'medianRelativeLikes', 'avgRelativeComments'];
+const metricOptions = [
+  {
+    key: 'avgRelativeLikes',
+    label: 'Avg Relative Likes',
+    color: colors.avgRelativeLikes,
+    negativeColor: colors.avgRelativeLikesNegative
+  },
+  {
+    key: 'medianRelativeLikes',
+    label: 'Median Relative Likes',
+    color: colors.medianRelativeLikes,
+    negativeColor: colors.medianRelativeLikesNegative
+  },
+  {
+    key: 'avgRelativeComments',
+    label: 'Avg Relative Comments',
+    color: colors.avgRelativeComments,
+    negativeColor: colors.avgRelativeCommentsNegative
+  }
+];
 
-const getVisibleMetricKeys = (showMedianRelativeLikes) => {
-  return showMedianRelativeLikes ? metricKeys : ['avgRelativeLikes', 'avgRelativeComments'];
+const getAvailableMetricOptions = (showMedianRelativeLikes) => {
+  return showMedianRelativeLikes
+    ? metricOptions
+    : metricOptions.filter((option) => option.key !== 'medianRelativeLikes');
+};
+
+const getDefaultSelectedMetricKeys = (showMedianRelativeLikes) => {
+  return getAvailableMetricOptions(showMedianRelativeLikes).map((option) => option.key);
 };
 
 const toNumeric = (value) => {
@@ -334,16 +359,8 @@ const CustomTick = (props) => {
   );
 };
 
-const CustomLegend = ({ showWinRate, showMedianRelativeLikes }) => {
-  const items = [
-    { label: 'Avg Relative Likes', color: colors.avgRelativeLikes },
-    { label: 'Avg Relative Comments', color: colors.avgRelativeComments },
-    { label: 'Negative Values Accent', color: colors.avgRelativeLikesNegative }
-  ];
-
-  if (showMedianRelativeLikes) {
-    items.splice(1, 0, { label: 'Median Relative Likes', color: colors.medianRelativeLikes });
-  }
+const CustomLegend = ({ showWinRate, visibleMetricKeys }) => {
+  const items = metricOptions.filter((option) => visibleMetricKeys.includes(option.key));
 
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', justifyContent: 'center', paddingTop: '20px' }}>
@@ -371,7 +388,19 @@ export const ClassificationPerformanceChart = ({
   categoryDefinitions = null,
   categoryType = null
 }) => {
-  const visibleMetricKeys = getVisibleMetricKeys(showMedianRelativeLikes);
+  const availableMetricOptions = useMemo(() => getAvailableMetricOptions(showMedianRelativeLikes), [showMedianRelativeLikes]);
+  const [selectedMetricKeys, setSelectedMetricKeys] = useState(() => getDefaultSelectedMetricKeys(showMedianRelativeLikes));
+
+  useEffect(() => {
+    setSelectedMetricKeys((currentKeys) => {
+      const availableKeys = availableMetricOptions.map((option) => option.key);
+      const nextKeys = currentKeys.filter((key) => availableKeys.includes(key));
+      return nextKeys.length > 0 ? nextKeys : availableKeys;
+    });
+  }, [availableMetricOptions]);
+
+  const visibleMetricKeys = selectedMetricKeys;
+  const hasVisibleMetrics = visibleMetricKeys.length > 0;
 
   const normalizedData = useMemo(() => {
     const baseRows = data.map((item) => ({
@@ -403,6 +432,34 @@ export const ClassificationPerformanceChart = ({
   return (
     <div style={{ width: '100%', height: '550px', backgroundColor: colors.background, padding: '20px', borderRadius: '8px', display: 'flex', flexDirection: 'column' }}>
       <h2 style={{ color: 'white', marginTop: 0, marginBottom: '20px', fontSize: '1.25rem', fontWeight: '600' }}>{title}</h2>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '12px 14px', borderRadius: '8px', border: '1px solid #343434', backgroundColor: '#262626' }}>
+        <span style={{ color: colors.text, fontSize: '12px', fontWeight: '600', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Show fields
+        </span>
+        {availableMetricOptions.map((option) => (
+          <label
+            key={option.key}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#cfcfcf', fontSize: '14px', cursor: 'pointer', userSelect: 'none' }}
+          >
+            <input
+              type="checkbox"
+              checked={visibleMetricKeys.includes(option.key)}
+              onChange={() => {
+                setSelectedMetricKeys((currentKeys) => {
+                  if (currentKeys.includes(option.key)) {
+                    return currentKeys.filter((key) => key !== option.key);
+                  }
+
+                  return [...currentKeys, option.key];
+                });
+              }}
+              style={{ accentColor: option.color }}
+            />
+            <span style={{ width: '10px', height: '10px', borderRadius: '2px', backgroundColor: option.color, flexShrink: 0 }} />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={normalizedData}
@@ -447,18 +504,20 @@ export const ClassificationPerformanceChart = ({
           />
           
           <Legend 
-            content={<CustomLegend showWinRate={showWinRate} showMedianRelativeLikes={showMedianRelativeLikes} />}
+            content={<CustomLegend showWinRate={showWinRate} visibleMetricKeys={visibleMetricKeys} />}
           />
           
-          <Bar dataKey="avgRelativeLikes" name="Avg Relative Likes" barSize={20} minPointSize={3}>
-            {normalizedData.map((entry, index) => (
-              <Cell
-                key={`avgRelativeLikes-${entry.name}-${index}`}
-                fill={entry.avgRelativeLikes < 0 ? colors.avgRelativeLikesNegative : colors.avgRelativeLikes}
-              />
-            ))}
-          </Bar>
-          {showMedianRelativeLikes && (
+          {visibleMetricKeys.includes('avgRelativeLikes') && (
+            <Bar dataKey="avgRelativeLikes" name="Avg Relative Likes" barSize={20} minPointSize={3}>
+              {normalizedData.map((entry, index) => (
+                <Cell
+                  key={`avgRelativeLikes-${entry.name}-${index}`}
+                  fill={entry.avgRelativeLikes < 0 ? colors.avgRelativeLikesNegative : colors.avgRelativeLikes}
+                />
+              ))}
+            </Bar>
+          )}
+          {visibleMetricKeys.includes('medianRelativeLikes') && (
             <Bar dataKey="medianRelativeLikes" name="Median Relative Likes" barSize={20} minPointSize={3}>
               {normalizedData.map((entry, index) => (
                 <Cell
@@ -468,14 +527,22 @@ export const ClassificationPerformanceChart = ({
               ))}
             </Bar>
           )}
-          <Bar dataKey="avgRelativeComments" name="Avg Relative Comments" barSize={20} minPointSize={3}>
-            {normalizedData.map((entry, index) => (
-              <Cell
-                key={`avgRelativeComments-${entry.name}-${index}`}
-                fill={entry.avgRelativeComments < 0 ? colors.avgRelativeCommentsNegative : colors.avgRelativeComments}
-              />
-            ))}
-          </Bar>
+          {visibleMetricKeys.includes('avgRelativeComments') && (
+            <Bar dataKey="avgRelativeComments" name="Avg Relative Comments" barSize={20} minPointSize={3}>
+              {normalizedData.map((entry, index) => (
+                <Cell
+                  key={`avgRelativeComments-${entry.name}-${index}`}
+                  fill={entry.avgRelativeComments < 0 ? colors.avgRelativeCommentsNegative : colors.avgRelativeComments}
+                />
+              ))}
+            </Bar>
+          )}
+
+          {!hasVisibleMetrics && (
+            <text x="50%" y="50%" textAnchor="middle" fill={colors.text} fontSize="14">
+              Select at least one metric to display the bars.
+            </text>
+          )}
           
         </BarChart>
       </ResponsiveContainer>
