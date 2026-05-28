@@ -13,7 +13,6 @@ import './ScopeDetails.css';
 const defaultIntents = [
   { id: 'i1', name: 'Promotional', isEditing: false },
   { id: 'i2', name: 'Educational', isEditing: false },
-  { id: 'i3', name: 'Engagement', isEditing: false },
   { id: 'i4', name: 'Branding', isEditing: false },
   { id: 'i5', name: 'Social_Proof', isEditing: false },
   { id: 'i6', name: 'Announcement', isEditing: false },
@@ -21,13 +20,11 @@ const defaultIntents = [
 ];
 
 const defaultFormats = [
-  { id: 'f1', name: 'Trend', isEditing: false },
   { id: 'f2', name: 'Meme', isEditing: false },
   { id: 'f3', name: 'Tutorial', isEditing: false },
   { id: 'f4', name: 'Behind_the_Scenes', isEditing: false },
   { id: 'f5', name: 'User_Generated_Content', isEditing: false },
   { id: 'f6', name: 'Influencer_Collaboration', isEditing: false },
-  { id: 'f7', name: 'Aesthetic', isEditing: false },
   { id: 'f8', name: 'event', isEditing: false }
 ];
 
